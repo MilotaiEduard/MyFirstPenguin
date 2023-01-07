@@ -1,25 +1,38 @@
-document.querySelector('#submit').onclick = function(){
-    var password = document.querySelector('#password').value,
-    confirmPassword = document.querySelector('#confirmpassword').value,
-    username = document.querySelector('#name').value;
+if(sessionStorage.getItem('id') != null) {
+    window.location.href = 'myaccount.html';
+}
 
-    if(username == ""){
-        alert("Username field cannot be empty.");
+$('form').submit(function(e) {
+    e.preventDefault();
+    if($('#name').val() == '') {
+        alert('Username field cannot be empty.');
+        return false;
     }
 
-     if(password == ""){
-       alert("Password field cannot be empty.");
+    if($('#age').val() == '') {
+        alert('Age field cannot be empty.');
+        return false;
     }
-
-     if(confirmPassword == "")
-        alert("Confirm Password field cannot be empty.");
-
-     if(username == "" && password == "" && confirmPassword == ""){
-        alert("Fields cannot be empty.");
+    
+    if($('#password').val() == '') {
+        alert('Password field cannot be empty.');
+        return false;
     }
-
-      if(password != confirmPassword){
+    if($('#confirmpassword').val() == '') {
+        alert('Confirm Password field cannot be empty.');
+        return false;
+    }
+    if($('#password').val() != $('#confirmpassword').val()) {
         alert("Passwords didn't match. Please try again.");
         return false;
     }
-}
+
+    $.post('http://localhost:3000/register', $('#form').serialize(), function(data) {
+        if (data.message == 'User Created') {
+            alert('User Created Successfully. Please login to continue.');
+            window.location.href = 'page3.html';
+        }
+    }).fail(function(error) {
+        alert('User already exists. Please try again.');
+    });
+});
