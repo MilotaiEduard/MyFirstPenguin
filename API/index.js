@@ -9,7 +9,11 @@ const port = 3000;
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(morgan('dev'));
-
+app.use((req, res, next) => {
+    
+    res.header('Access-Control-Allow-Origin', '*');
+ next();
+});
 app.get('/', (req, res) => res.send('Hello World!'));
 
 app.post("/login", (req, res) => {
@@ -38,7 +42,6 @@ app.post("/login", (req, res) => {
 
 app.post("/register", (req, res) => {
     const { name, age, password } = req.body;
-    
     db.get("SELECT * FROM users WHERE name = ?", [name], (err, row) => {
         if (err) {
             console.log(err);
@@ -75,6 +78,76 @@ app.get("/user", (req, res) => {
             res.status(500).json({message: "Internal Server Error"});
         } else if (row) {
             res.status(200).json({message: "User Found" , data: row});
+        } else {
+            res.status(404).json({message: "User Not Found"});
+        }
+    });
+});
+
+app.post("/changepassword", (req, res) => {
+    const { oldpassword, newpassword } = req.body;
+    const { id } = req.query;
+    
+    db.get("SELECT password FROM users WHERE id = ?", [id], (err, row) => {
+        if (err) {
+            console.log(err);
+            res.status(500).json({message: "Internal Server Error"});
+        } else if (row) {
+            bcrypt.compare(oldpassword, row.password, (err, result) => {
+                if (err) {
+                    console.log(err);
+                    res.status(500).json({message: "Internal Server Error"});
+                } else if (result) {
+                    bcrypt.hash(newpassword, 10, (err, hash) => {
+                        if (err) {
+                            console.log(err);
+                            res.status(500).json({message: "Internal Server Error"});
+                        } else {
+                            db.run("UPDATE users SET password = ? WHERE id = ?", [hash, id], (err) => {
+                                if (err) {
+                                    console.log(err);
+                                    res.status(500).json({message: "Internal Server Error"});
+                                } else {
+                                    res.status(200).json({message: "Password Changed"});
+                                }
+                            });
+                        }
+                    });
+                } else {
+                    res.status(401).json({message: "Incorrect Password"});
+                }
+            });
+        } else {
+            res.status(404).json({message: "User Not Found"});
+        }
+    });
+});
+
+app.post("/changeuser", (req, res) => {
+    const name  = req.body.newusername;
+    const { id } = req.query;
+    db.get("SELECT * FROM users WHERE id = ?", [id], (err, row) => {
+        if (err) { 
+            console.log(err);
+            res.status(500).json({message: "Internal Server Error"});
+        } else if (row) {
+            db.get("SELECT * FROM users WHERE name = ?", [name], (err, row) => {
+                if (err) {
+                    console.log(err);
+                    res.status(500).json({message: "Internal Server Error"});
+                } else if (row) {
+                    res.status(409).json({message: "User Already Exists"});
+                } else {
+                    db.run("UPDATE users SET name = ? WHERE id = ?", [name, id], (err) => {
+                        if (err) {
+                            console.log(err);
+                            res.status(500).json({message: "Internal Server Error"});
+                        } else {
+                            res.status(200).json({message: "Username Changed"});
+                        }
+                    });
+                }
+            });
         } else {
             res.status(404).json({message: "User Not Found"});
         }
